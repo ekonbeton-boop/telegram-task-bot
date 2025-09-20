@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>📊 Статистика</h2>
+<a href="/export" class="btn btn-success mb-3">📥 Экспорт в Excel</a>
+<div id="stats" class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5>Всего задач</h5>
+                <h3 id="total">—</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <h5>Открыто</h5>
+                <h3 id="open">—</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5>Закрыто</h5>
+                <h3 id="closed">—</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5>Среднее время</h5>
+                <h3 id="avg_time">—</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h4>📈 Топ-5 самых долгих задач</h4>
+<ul id="top-tasks">
+    <!-- Заполнится JS -->
+</ul>
+
+<hr>
+
+<!-- Фильтры -->
+<div class="btn-group mb-3" role="group">
+    <a href="/" class="btn btn-outline-secondary {% if filter == 'all' %}active{% endif %}">Все</a>
+    <a href="/?filter=open" class="btn btn-outline-warning {% if filter == 'open' %}active{% endif %}">Открытые</a>
+    <a href="/?filter=closed" class="btn btn-outline-success {% if filter == 'closed' %}active{% endif %}">Закрытые</a>
+</div>
+
+<!-- Форма добавления -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>➕ Добавить задачу</h5>
+        <form method="POST" action="/add">
+            <div class="input-group">
+                <input type="text" name="description" class="form-control" placeholder="Описание задачи" required>
+                <button class="btn btn-primary" type="submit">Добавить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Список задач -->
+<h4>📋 Задачи</h4>
+{% if tasks %}
+    <div class="list-group">
+    {% for task in tasks %}
+        <div class="list-group-item">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <strong>🔖 ID: {{ task['id'] }}</strong><br>
+                    <span class="fw-bold">{{ task['description'] }}</span><br>
+                    <small class="text-muted">Создана: {{ task['created_at'] }}</small>
+                    {% if task['is_closed'] %}
+                        <br><span class="badge bg-success">✅ Закрыта</span>
+                        <br><small>Закрыта: {{ task['closed_at'] }} | ⏱️ {{ task['time_spent'] }} ч.</small>
+                    {% else %}
+                        <br><span class="badge bg-warning text-dark">⏳ Открыта</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex flex-column gap-1">
+                    {% if not task['is_closed'] %}
+                        <button class="btn btn-success btn-sm" onclick="closeTask({{ task['id'] }})">✅ Закрыть</button>
+                    {% endif %}
+                    <button class="btn btn-outline-primary btn-sm" onclick="editTask({{ task['id'] }}, '{{ task['description']|replace("'", "\\'") }}')">✏️ Редактировать</button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteTask({{ task['id'] }})">🗑️ Удалить</button>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">📭 Задач пока нет.</div>
+{% endif %}
+
+<script>
+    $(document).ready(function() {
+        $.get('/api/stats', function(data) {
+            $('#total').text(data.total);
+            $('#open').text(data.open);
+            $('#closed').text(data.closed);
+            $('#avg_time').text(data.avg_time + ' ч.');
+
+            let topList = $('#top-tasks');
+            topList.empty();
+            if (data.top_long_tasks.length > 0) {
+                let html = '<ul>';
+                data.top_long_tasks.forEach(item => {
+                    html += `<li>${item.description} — <strong>${item.time_spent} ч.</strong></li>`;
+                });
+                html += '</ul>';
+                topList.html(html);
+            } else {
+                topList.text('Нет данных');
+            }
+        });
+    });
+</script>
+{% endblock %}
